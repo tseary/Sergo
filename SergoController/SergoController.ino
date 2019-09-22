@@ -89,27 +89,35 @@ void checkMessage() {
 	sei();
 
 	/**************************************************************************
-	 * Message Parsing
-	 *
-	 * The message structure is 16 bits:
-	 * TECC aMMM DDDD LLLL
-	 *
-	 * T    - toggles for every new command
-	 * E    - 0 = use MMM below to determine mode
-	 *        1 = Combo PWM mode (timeout)
-	 * CC   - Channel 0 to 3
-	 * a    - 0 = RC receiver address space
-	 *        1 = extra address space
-	 * MMM  - 000 = Not used in PF RC Receiver
-	 *        001 = Combo direct(timeout)
-	 *        010 = Single pin continuous(no timeout)
-	 *        011 = Single pin timeout
-	 *        1xx = Single output
-	 * DDDD - Data, meaning depends on mode
-	 * LLLL - Checksum, 0xf ^ nibble1 ^ nibble2 ^ nibble3
-	 **************************************************************************/
+	* Message Parsing
+	*
+	* The message structure is 16 bits:
+	* TECC aMMM DDDD LLLL
+	*
+	* T    - toggles for every new command
+	* E    - 0 = use MMM below to determine mode
+	*        1 = Combo PWM mode (timeout)
+	* CC   - Channel 0 to 3
+	* a    - 0 = RC receiver address space
+	*        1 = extra address space
+	* MMM  - 000 = Not used in PF RC Receiver
+	*        001 = Combo direct(timeout)
+	*        010 = Single pin continuous(no timeout)
+	*        011 = Single pin timeout
+	*        1xx = Single output
+	* DDDD - Data, meaning depends on mode
+	* LLLL - Checksum, 0xf ^ nibble1 ^ nibble2 ^ nibble3
+	***************************************************************************/
 
-	 // Checksum
+	// Channel is the most likely reason to reject a message, so check that first
+	// Channel
+	uint8_t channelAddress = (message >> 11) & 0b111;
+	// Ignore if the message is for a different channel
+	if (channelAddress != myChannelAddress) {
+		return;
+	}
+
+	// Checksum
 	uint16_t checksum = ~((message >> 12) ^
 		(message >> 8) ^ (message >> 4)) & 0x0f;
 	bool correct = (message & 0x0f) == checksum;
@@ -126,13 +134,6 @@ void checkMessage() {
 			return;
 		}
 		lastToggleBit = toggleBit;
-	}
-
-	// Channel
-	uint8_t channelAddress = (message >> 11) & 0b111;
-	// Ignore if the message is for a different channel
-	if (channelAddress != myChannelAddress) {
-		return;
 	}
 
 	// Mode and data
@@ -221,23 +222,11 @@ void floatMotors() {
 }
 
 void refreshServos() {
-	// DEBUG
-	bool blink = false;
-
 	if (pulseOnA) {
 		pulseOnA = servoA.refresh();
-		blink = true;
 	} else if (millis() >= refreshTime) {
 		pulseOnA = servoA.refresh();
 		refreshTime += 20;
-		blink = true;
-	}
-
-	// DEBUG
-	if (blink) {
-		digitalWrite(LED_PIN, HIGH);
-		delayMicroseconds(100);
-		digitalWrite(LED_PIN, LOW);
 	}
 }
 

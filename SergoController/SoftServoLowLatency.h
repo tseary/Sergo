@@ -15,6 +15,8 @@
 
 class SoftServoLowLatency {
 public:
+	// Lower maxLatency allows more time-sensitive tasks outside of this class.
+	// Higher maxLatency may improve servo accuracy. Default is 250 us.
 	SoftServoLowLatency(uint16_t maxLatency = 250);
 	void attach(uint8_t pin);
 	void detach();
