@@ -30,7 +30,10 @@ MODE_NOT_USED = 0b000,
 MODE_COMBO_DIRECT = 0b001,
 MODE_SINGLE_PIN_CONTINUOUS = 0b010,
 MODE_SINGLE_PIN_TIMEOUT = 0b010,
-MODE_SINGLE_OUTPUT = 0b100;*/
+MODE_SINGLE_OUTPUT_PWM_A = 0b100,
+MODE_SINGLE_OUTPUT_PWM_B = 0b101,
+MODE_SINGLE_OUTPUT_CST_A = 0b110,
+MODE_SINGLE_OUTPUT_CST_B = 0b100;*/
 
 const uint8_t
 COMBO_DIRECT_FLOAT = 0b00,
@@ -41,6 +44,8 @@ COMBO_DIRECT_BRAKE = 0b11;
 // Servo
 const uint8_t SERVO_OUTPUT_PIN = 2;
 Servo myServo;  // create servo object to control a servo
+const int POS_CENTER = 81;
+const int POS_SWING = 60;
 
 // Timeout
 const uint32_t TIMEOUT_MILLIS = 2000;
@@ -55,7 +60,7 @@ void setup() {
 
 	// Set up servo
 	myServo.attach(SERVO_OUTPUT_PIN);
-	myServo.write(90);	// Position from 0-180 degrees
+	myServo.write(POS_CENTER);	// Position from 0-180 degrees
 
 	// Set up pin change interrupts on RX
 	pinMode(IR_RX_PIN, INPUT_PULLUP);
@@ -173,16 +178,13 @@ void comboDirect(uint8_t data) {
 	uint8_t motorA = data & 0b11;
 	uint8_t motorB = (data >> 2) & 0b11;
 
-	uint16_t position;
+	uint16_t position = POS_CENTER;
 	switch (motorA) {
-	default:
-		position = 90;
-		break;
 	case COMBO_DIRECT_FWD:
-		position = 135;
+		position += POS_SWING;
 		break;
 	case COMBO_DIRECT_REV:
-		position = 45;
+		position -= POS_SWING;
 		break;
 	}
 	myServo.write(position);
