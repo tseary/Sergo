@@ -4,11 +4,12 @@
 	Author:     SCROLLSAW\Thomas
 */
 
-#include <Servo.h>
+#include <Adafruit_SoftServo2.h>
 
-const uint8_t IR_RX_PIN = 8;	// Arduino pin 8 is PCINT0 on ATMEGA328P
+// IR Receiver
+const uint8_t IR_RX_PIN = 2;	// Arduino pin 2 on ATTINY84 is PCINT2
 
-// Channel
+// Channel and address space
 const uint8_t myChannelAddress = 0 << 1;	// [0-3] << 1
 
 // Message receiving
@@ -41,33 +42,34 @@ COMBO_DIRECT_FWD = 0b01,
 COMBO_DIRECT_REV = 0b10,
 COMBO_DIRECT_BRAKE = 0b11;
 
-// Servo
-const uint8_t SERVO_OUTPUT_PIN = 2;
-Servo myServo;  // create servo object to control a servo
-const int POS_CENTER = 81;
-const int POS_SWING = 60;
+// Servos
+Adafruit_SoftServo2 servoA;
+const bool ALWAYS_REFRESH = true;
+uint32_t refreshTime = 0;
+
+const uint8_t SERVO_A_PIN = 3;
+const int POS_CENTER = 90;
+const int POS_SWING = 90;
 
 // Timeout
 const uint32_t TIMEOUT_MILLIS = 2000;
 uint32_t lastCommandMillis = 0;
 bool doTimeout = false;
 
-void setup() {
-	Serial.begin(250000);
+uint8_t LED_PIN = 4;
 
+void setup() {
 	// Pilot light
-	pinMode(LED_BUILTIN, OUTPUT);
+	pinMode(LED_PIN, OUTPUT);
 
 	// Set up servo
-	myServo.attach(SERVO_OUTPUT_PIN);
-	myServo.write(POS_CENTER);	// Position from 0-180 degrees
+	servoA.attach(SERVO_A_PIN);
+	servoA.write(POS_CENTER);	// Position from 0-180 degrees
 
 	// Set up pin change interrupts on RX
-	pinMode(IR_RX_PIN, INPUT_PULLUP);
-	// See https://thewanderingengineer.com/2014/08/11/pin-change-interrupts-on-attiny85/
-	PCICR |= bit(PCIE0);	// turns on pin change interrupts
-	//PCMSK0 |= (1 << PCINT0);   // set PCINT0 to trigger an interrupt on state change 
-	PCMSK0 |= bit(PCINT0);   // set PCINT0 to trigger an interrupt on state change 
+	pinMode(IR_RX_PIN, INPUT);
+	GIMSK |= bit(PCIE0);	// turns on pin change interrupts
+	PCMSK0 |= bit(PCINT2);	// turn on interrupts on RX pin
 
 	sei();                     // turn on interrupts
 }
@@ -75,6 +77,7 @@ void setup() {
 void loop() {
 	checkMessage();
 	checkTimeout();
+	refreshServos();
 }
 
 void checkMessage() {
@@ -136,10 +139,6 @@ void checkMessage() {
 	// Mode and data
 	uint8_t mode = (message >> 8) & 0b111,
 		data = (message >> 4) & 0b1111;
-	//Serial.print("mode\t");
-	//Serial.println(mode, BIN);
-	//Serial.print("data\t");
-	//Serial.println(data, BIN);
 	switch (mode) {
 	case 0b000:	// Not used in PF RC receiver
 		break;
@@ -156,16 +155,6 @@ void checkMessage() {
 		singleOutput(data);
 		break;
 	}
-
-	Serial.print("correct\t");
-	Serial.println(correct ? 1 : 0);
-
-	Serial.print("message\t");
-	for (uint8_t i = 0; i < MESSAGE_LENGTH; i++) {
-		Serial.print((message >> i) & 1);
-		if ((i % 4) == 3) Serial.print(' ');
-	}
-	Serial.println();
 }
 
 /*******************************************************************************
@@ -173,7 +162,7 @@ void checkMessage() {
 *******************************************************************************/
 
 void comboDirect(uint8_t data) {
-	digitalWrite(LED_BUILTIN, HIGH);
+	digitalWrite(LED_PIN, HIGH);
 
 	uint8_t motorA = data & 0b11;
 	uint8_t motorB = (data >> 2) & 0b11;
@@ -187,11 +176,11 @@ void comboDirect(uint8_t data) {
 		position -= POS_SWING;
 		break;
 	}
-	myServo.write(position);
+	servoA.write(position);
 
 	startTimeout();
 
-	digitalWrite(LED_BUILTIN, LOW);
+	digitalWrite(LED_PIN, LOW);
 }
 
 void singlePinContinuous(uint8_t data) {
@@ -233,7 +222,14 @@ void clearTimeout() {
 
 void floatMotors() {
 	// DEBUG
-	myServo.write(90);
+	servoA.write(90);
+}
+
+void refreshServos() {
+	if (millis() >= refreshTime || ALWAYS_REFRESH) {
+		servoA.refresh();
+		refreshTime += 20;
+	}
 }
 
 /*******************************************************************************
@@ -241,6 +237,8 @@ void floatMotors() {
 *******************************************************************************/
 
 ISR(PCINT0_vect) {
+	digitalWrite(LED_PIN, HIGH);	// DEBUG
+
 	// Ignore rising edges (end of IR mark)
 	if (digitalRead(IR_RX_PIN)) {
 		return;
