@@ -16,11 +16,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="SergoController.ino" />
-    <None Include="Command.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.SergoController.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SoftServoLowLatency.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SoftServoLowLatency.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
