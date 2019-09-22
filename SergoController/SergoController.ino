@@ -43,34 +43,31 @@ COMBO_DIRECT_REV = 0b10,
 COMBO_DIRECT_BRAKE = 0b11;
 
 // Servos
-SoftServoLowLatency servoA;
-bool pulseOnA = false;
+SoftServoLowLatency servoA, servoB;
+const uint8_t SERVO_A_PIN = 1, SERVO_B_PIN = 3;
+const int POS_CENTER = 90, POS_SWING = 90;
+bool pulseOnEither = false;
 uint32_t refreshTime = 0;
-const uint8_t SERVO_A_PIN = 3;
-const int POS_CENTER = 90;
-const int POS_SWING = 90;
 
 // Timeout
 const uint32_t TIMEOUT_MILLIS = 2000;
 uint32_t lastCommandMillis = 0;
 bool doTimeout = false;
 
-uint8_t LED_PIN = 4;
-
 void setup() {
-	// Pilot light
-	pinMode(LED_PIN, OUTPUT);
-
-	// Set up servo
+	// Set up servos
 	servoA.attach(SERVO_A_PIN);
-	servoA.write(POS_CENTER);	// Position from 0-180 degrees
+	servoA.write(POS_CENTER);
+	servoB.attach(SERVO_B_PIN);
+	servoB.write(POS_CENTER);
 
 	// Set up pin change interrupts on RX
 	pinMode(IR_RX_PIN, INPUT);
 	GIMSK |= bit(PCIE0);	// turns on pin change interrupts
 	PCMSK0 |= bit(PCINT2);	// turn on interrupts on RX pin
 
-	sei();                     // turn on interrupts
+	// Turn on interrupts
+	sei();
 }
 
 void loop() {
@@ -162,19 +159,29 @@ void checkMessage() {
 *******************************************************************************/
 
 void comboDirect(uint8_t data) {
-	uint8_t motorA = data & 0b11;
-	uint8_t motorB = (data >> 2) & 0b11;
-
-	uint16_t position = POS_CENTER;
-	switch (motorA) {
+	uint8_t motorACode = data & 0b11;
+	uint16_t positionA = POS_CENTER;
+	switch (motorACode) {
 	case COMBO_DIRECT_FWD:
-		position += POS_SWING;
+		positionA += POS_SWING;
 		break;
 	case COMBO_DIRECT_REV:
-		position -= POS_SWING;
+		positionA -= POS_SWING;
 		break;
 	}
-	servoA.write(position);
+	servoA.write(positionA);
+
+	uint8_t motorBCode = (data >> 2) & 0b11;
+	uint16_t positionB = POS_CENTER;
+	switch (motorBCode) {
+	case COMBO_DIRECT_FWD:
+		positionB += POS_SWING;
+		break;
+	case COMBO_DIRECT_REV:
+		positionB -= POS_SWING;
+		break;
+	}
+	servoB.write(positionB);
 
 	startTimeout();
 }
@@ -199,8 +206,8 @@ void checkTimeout() {
 	if (!doTimeout) return;
 	if ((millis() - lastCommandMillis) >= TIMEOUT_MILLIS) {
 		floatMotors();
+		doTimeout = false;
 	}
-	doTimeout = false;
 }
 
 void startTimeout() {
@@ -218,14 +225,17 @@ void clearTimeout() {
 
 void floatMotors() {
 	// DEBUG
-	servoA.write(90);
+	servoA.write(POS_CENTER);
+	servoB.write(POS_CENTER);
 }
 
 void refreshServos() {
-	if (pulseOnA) {
-		pulseOnA = servoA.refresh();
+	if (pulseOnEither) {
+		pulseOnEither = servoA.refresh();
+		pulseOnEither |= servoB.refresh();
 	} else if (millis() >= refreshTime) {
-		pulseOnA = servoA.refresh();
+		pulseOnEither = servoA.refresh();
+		pulseOnEither |= servoB.refresh();
 		refreshTime += 20;
 	}
 }

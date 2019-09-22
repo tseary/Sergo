@@ -40,6 +40,10 @@ void SoftServoLowLatency::write(uint8_t degrees) {
 bool SoftServoLowLatency::refresh(void) {
 
 	// TODO Maybe pause interrupts during this entire function
+	cli();
+
+	// If pulseMicros changes during a pulse,
+	// the change takes effect on the next pulse.
 
 	if (pulseOn) {
 		// We are partway through a pulse
@@ -50,10 +54,10 @@ bool SoftServoLowLatency::refresh(void) {
 			digitalWrite(servoPin, pulseOn = false);
 		} else if (remaining <= _maxLatency) {
 			// Pulse end is soon, so pause interrupts and finish it now
-			cli();
+			//cli();
 			delayMicroseconds(remaining);
 			digitalWrite(servoPin, pulseOn = false);
-			sei();
+			//sei();
 		}
 	} else {
 		// A pulse hasn't been started
@@ -65,5 +69,6 @@ bool SoftServoLowLatency::refresh(void) {
 		}
 	}
 
+	sei();
 	return pulseOn;
 }
