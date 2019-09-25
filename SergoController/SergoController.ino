@@ -7,7 +7,7 @@
 #include "SoftServoLowLatency.h"
 
 // IR Receiver
-const uint8_t IR_RX_PIN = 2;	// Arduino pin 2 on ATTINY84 is PCINT2
+const uint8_t IR_RX_PIN = 3;	// Arduino pin 2 on ATTINY84 is PCINT2
 
 // Channel and address space
 const uint8_t myChannelAddress = 0 << 1;	// [0-3] << 1
@@ -44,7 +44,7 @@ COMBO_DIRECT_BRAKE = 0b11;
 
 // Servos
 SoftServoLowLatency servoA, servoB;
-const uint8_t SERVO_A_PIN = 1, SERVO_B_PIN = 3;
+const uint8_t SERVO_A_PIN = 1, SERVO_B_PIN = 2;
 const int POS_CENTER = 90, POS_SWING = 90;
 bool pulseOnEither = false;
 uint32_t refreshTime = 0;
@@ -64,7 +64,7 @@ void setup() {
 	// Set up pin change interrupts on RX
 	pinMode(IR_RX_PIN, INPUT);
 	GIMSK |= bit(PCIE0);	// turns on pin change interrupts
-	PCMSK0 |= bit(PCINT2);	// turn on interrupts on RX pin
+	PCMSK0 |= bit(PCINT3);	// turn on interrupts on RX pin
 
 	// Turn on interrupts
 	sei();
