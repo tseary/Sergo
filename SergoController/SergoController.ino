@@ -7,10 +7,22 @@
 #include "SoftServoLowLatency.h"
 
 // IR Receiver
-const uint8_t IR_RX_PIN = 3;	// Arduino pin 2 on ATTINY84 is PCINT2
+const uint8_t IR_RX_PIN = 1;	// Arduino pin 2 on ATTINY84 is PCINT2
+
+// Channel selection pins
+const uint8_t
+CH1_INPUT_PIN = 10,
+CH2_INPUT_PIN = 9;
+
+// Control inputs
+const uint8_t
+C1_INPUT_PIN = 5,	// TODO check schematic
+C2_INPUT_PIN = 6;
+
+bool nextC1, nextC2, lastC1, lastC2;
 
 // Channel and address space
-const uint8_t myChannelAddress = 0 << 1;	// [0-3] << 1
+uint8_t myChannelAddress;	// [0-3] << 1
 
 // Message receiving
 const uint8_t MESSAGE_LENGTH = 16;
@@ -44,8 +56,8 @@ COMBO_DIRECT_BRAKE = 0b11;
 
 // Servos
 SoftServoLowLatency servoA, servoB;
-const uint8_t SERVO_A_PIN = 1, SERVO_B_PIN = 2;
-const int POS_CENTER = 90, POS_SWING = 90;
+const uint8_t SERVO_A_PIN = 2, SERVO_B_PIN = 3;
+const int POS_CENTER = 90, POS_SWING = 20;
 bool pulseOnEither = false;
 uint32_t refreshTime = 0;
 
@@ -55,6 +67,9 @@ uint32_t lastCommandMillis = 0;
 bool doTimeout = false;
 
 void setup() {
+	// C1 and C2 input pins
+	setupControl();
+
 	// Set up servos
 	servoA.attach(SERVO_A_PIN);
 	servoA.write(POS_CENTER);
@@ -62,17 +77,43 @@ void setup() {
 	servoB.write(POS_CENTER);
 
 	// Set up pin change interrupts on RX
+	setupChannel();
 	pinMode(IR_RX_PIN, INPUT);
 	GIMSK |= bit(PCIE0);	// turns on pin change interrupts
-	PCMSK0 |= bit(PCINT3);	// turn on interrupts on RX pin
+	PCMSK0 |= bit(PCINT1);	// turn on interrupts on RX pin
 
 	// Turn on interrupts
 	sei();
 }
 
+// Channel change becomes effective after reset
+void setupChannel() {
+	pinMode(CH1_INPUT_PIN, INPUT_PULLUP);
+	pinMode(CH2_INPUT_PIN, INPUT_PULLUP);
+
+	// Read channel
+	myChannelAddress = (!digitalRead(CH1_INPUT_PIN) ? 0b010 : 0) +
+		(!digitalRead(CH2_INPUT_PIN) ? 0b100 : 0);
+
+	// Let pins float
+	pinMode(CH1_INPUT_PIN, INPUT);
+	pinMode(CH2_INPUT_PIN, INPUT);
+}
+
+void setupControl() {
+	pinMode(C1_INPUT_PIN, INPUT_PULLUP);
+	pinMode(C2_INPUT_PIN, INPUT_PULLUP);
+
+	// Flush the values of lastC1 and lastC2
+	readControl();
+}
+
 void loop() {
 	checkMessage();
 	checkTimeout();
+
+	updateControl();
+
 	refreshServos();
 }
 
@@ -152,6 +193,39 @@ void checkMessage() {
 		singleOutput(data);
 		break;
 	}
+}
+
+/*******************************************************************************
+* Power Functions pin control
+*******************************************************************************/
+
+// TODO use inline for all update functions in main loop
+void updateControl() {
+	// Read the control pins
+	readControl();
+
+	// Do nothing if the control hasn't changed
+	if (nextC1 == lastC1 && nextC2 == lastC2) return;
+
+	// Execute control command
+	uint16_t position = POS_CENTER;
+	if (nextC1 && !nextC2) {
+		// Forward
+		position += POS_SWING;
+	} else if (!nextC1 && nextC2) {
+		// Reverse
+		position -= POS_SWING;
+	}
+	servoA.write(position);
+	servoB.write(position);
+}
+
+inline void readControl() {
+	// Read the control pins
+	lastC1 = nextC1;
+	lastC2 = nextC2;
+	nextC1 = digitalRead(C1_INPUT_PIN);
+	nextC2 = digitalRead(C2_INPUT_PIN);
 }
 
 /*******************************************************************************
