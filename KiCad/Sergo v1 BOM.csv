@@ -1,0 +1,18 @@
+"Id";"Designator";"Package";"Quantity";"Designation";"Supplier and ref";
+1;"C1";"1206";1;"47uF";;;
+2;"C4,C5,C3";"0805";3;"0.1uF";;;
+3;"P2";"Pin_Header_02x03";1;"ICSP";;;
+4;"P3";"Pin_Header_02x03";1;"SERVOS";;;
+5;"U2";"TSOP382_RA";1;"TSOP38238";;;
+6;"C2";"C_SMT_D8";1;"220uF 10V";;;
+7;"R2,R3";"0805";2;"10k";;;
+8;"R4";"0805";1;"33";;;
+9;"PS1";"DC-DC_MYLSM00502ERPL";1;"MYLSM00502ERPL";;;
+10;"P1";"Conn_Micro-MaTch_215570-4";1;"POWER FUNCTIONS";;;
+11;"F1";"1812";1;"1.5A";;;
+12;"D1";"SOT-23_Diode_ANK";1;"15V";;;
+13;"D2";"SOT-23";1;"ZENER 4.3V";;;
+14;"U1";"SOIC-14";1;"ATTINY84-S";;;
+15;"R1";"0805";1;"1k";;;
+16;"JP2";"0805_JUMPER";1;"CH2";;;
+17;"JP1";"0805_JUMPER";1;"CH1";;;

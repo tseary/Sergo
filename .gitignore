@@ -2,3 +2,13 @@
 SergoController/.vs/*
 SergoController/__vm/*
 SergoController/Release/*
+C1C2.ino.txt
+/KiCad/rescue-backup
+*.zip
+KiCad/Sergo-rescue.dcm
+KiCad/Sergo-rescue.kicad_sym
+KiCad/Sergo-rescue.lib
+*.sch-bak
+*.kicad_pcb-bak
+*.bak
+KiCad/fp-info-cache
